@@ -6,5 +6,9 @@ create_env:
 req:
 	pip install requirements.txt
 
-activate_windows:
-	source/venv/script
+
+run:
+	source venv/bin/activate && python main.py
+
+run_windows:
+	venv\Scripts\activate && python main.py

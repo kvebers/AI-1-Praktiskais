@@ -31,8 +31,11 @@ def one_nine_gen():
         value = one_nine_gen()
     return value
 
-print(one_nine_gen())
-print(simple_gen())
+
+if __name__ == "__main__":
+    print(one_nine_gen())
+    print(simple_gen())
+
 
 
 
