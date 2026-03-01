@@ -27,24 +27,40 @@ class Screen(ABC):
 class IntroScreen(Screen):
     def __init__(self, game):
         super().__init__(game)
+        color = (20, 20, 20, 10)
         self.bgImage = pygame.image.load("assets/RobBanks.png").convert_alpha()
-        self.startButton = Button(800, 540, 300, 60, "Start Game", None, (20, 20, 20, 10))
-        self.settingsButton = Button(800, 600, 300, 60, "Settings", None, (20, 20, 20, 10))
+        self.startButton = Button(800, 540, 300, 60, "Start Game", None, color)
+        self.settingsButton = Button(800, 600, 300, 60, "Settings", None, color)
         self.time = 0
+        self.wallOffset = 0
 
     def walking(self, screen):
         sineRotation = math.sin(self.time * 2 * math.pi * 2) * 2
         screenWidth, screenHeight = screen.get_size()
         angle = math.sin(self.time * 2 * math.pi * 1.5) * 1
-        scaled = pygame.transform.scale(self.bgImage, (screenWidth + 20, screenHeight + 20))
+        scaled = pygame.transform.scale(self.bgImage, (screenWidth + 50, screenHeight + 50))
         rotated = pygame.transform.rotate(scaled, angle)
         rect = rotated.get_rect(center=(screenWidth // 2, screenHeight // 2 + sineRotation))
         screen.blit(rotated, rect)
-                
+
+    def drawWall(self, screen):
+        layers = 15
+        layerList = []
+        for i in range(layers):
+            t = (i + self.wallOffset) % layers
+            layerList.append(t)
+        layerList.sort() 
+        for t in layerList:
+            x = int((t / layers) * 150)
+            color = max(0, min(255, x / 2))
+            pygame.draw.polygon(screen, (color, color, color), [(600 + x, 300 - 3 * x), (800,0), (1280 ,0), (1280,720), (800,720), (600 + x,300 + 3 * x)])
+
 
     def playScreen(self, screen, dt, events):
         self.time += dt
-        screen.fill("gray") 
+        screen.fill("black")
+        self.wallOffset += 1.5 * dt 
+        self.drawWall(screen)
         self.walking(screen)
         self.startButton.draw(screen)
         self.settingsButton.draw(screen)
@@ -68,7 +84,6 @@ class EndScreen(Screen):
         screen.fill("black")
 
 # https://www.pygame.org/docs/
-
 class Game():
     def __init__(self):
         self.currentScreen = None
