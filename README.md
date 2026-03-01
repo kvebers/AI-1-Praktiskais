@@ -14,5 +14,5 @@ feature/** → dev → main
 ```
 
 1. Create a feature branch: `feature/your-feature-name`
-2. Open a pull request into `dev` 
-3. Open a pull request from `dev`
+2. Open a pull request into `dev` from `feature/your-feature-name`
+3. Open a pull request from `dev` to `main`
