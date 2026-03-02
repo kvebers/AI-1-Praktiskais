@@ -1,17 +1,15 @@
 import random
+from config import config
 
 
 # https://docs.python.org/3/library/random.html
-
-low_bound=20000
-up_bound=30000
+low_bound=config['upperBound']
+up_bound=config['lowerBound']
 
 
 def generate_random(up=low_bound, low=up_bound):
     return random.randint(up, low)
     
-
-
 def simple_gen():
     rand = generate_random()
     while (rand % 2 != 0 or rand % 3 != 0):
@@ -30,12 +28,6 @@ def one_nine_gen():
     if (value <= low_bound or value >= up_bound):
         value = one_nine_gen()
     return value
-
-
-if __name__ == "__main__":
-    print(one_nine_gen())
-    print(simple_gen())
-
 
 
 
