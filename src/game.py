@@ -44,16 +44,19 @@ class IntroScreen(Screen):
         screen.blit(rotated, rect)
 
     def drawWall(self, screen):
-        layers = 15
+        layers = 16
         layerList = []
         for i in range(layers):
             t = (i + self.wallOffset) % layers
             layerList.append(t)
-        layerList.sort() 
+        layerList.sort()
+        deltaMovment = 5
+        colorReduction = 3
+        shiftCoefficient = 150
         for t in layerList:
-            x = int((t / layers) * 150)
-            color = max(0, min(255, x / 2))
-            pygame.draw.polygon(screen, (color, color, color), [(600 + x, 300 - 3 * x), (800,0), (1280 ,0), (1280,720), (800,720), (600 + x,300 + 3 * x)])
+            x = int((t / layers) * shiftCoefficient)
+            color = max(0, min(255/ colorReduction, x / colorReduction))
+            pygame.draw.polygon(screen, (color, color, color), [(600 + x, 300 - deltaMovment * x), (800,0), (1280 ,0), (1280,720), (800,720), (600 + x,300 + deltaMovment * x)])
 
 
     def playScreen(self, screen, dt, events):
@@ -76,8 +79,18 @@ class GameScreen(Screen):
         screen.fill("purple")
 
 class SettingsScreen(Screen):
+    def __init__(self, game):
+        super().__init__(game)
+        color = (20, 20, 20, 10)
+        self.bgImage = pygame.image.load("assets/RobBanks.png").convert_alpha()
+        self.backButton = Button(800, 540, 300, 60, "Back", None, color)
+    
     def playScreen(self, screen, dt, events):
-        screen.fill("grey")
+        screen.fill("black")
+        self.backButton.draw(screen)
+        for event in events:
+            if self.backButton.clicked(event):
+                self.game.setScreen(IntroScreen(self.game))
 
 class EndScreen(Screen):
     def playScreen(self, screen, dt, events):
