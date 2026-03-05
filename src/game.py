@@ -3,17 +3,89 @@ import pygame
 from abc import ABC, abstractmethod
 from src.button import Button
 import math
+from src.number_gen import simpleGen, oneNineGen
+from src.graph import Node
 
 
 class GameData():
     def __init__(self):
         self.mode = config["algorithm"]
-        self.start = config["start"]
-        self.number = config['genAlgorithm']
-        self.nodes = []
-        self.playerScore1 = 0
-        self.playerScore2 = 0
+        self.startingPlayer = config["start"]
+        self.genAlgorithm = config['genAlgorithm'] # start number
+        self.score = [0, 0]
+        self.startingNumber = None
+        self.numbersToPlay = []
+        self.head = None
         print("Game Script is running")
+
+    def updateMode(self, algorithm):
+        self.mode = algorithm
+
+
+    def updateStartingPlayer(self, start):
+        self.startingPlayer = start
+
+    def updateGenAlgorithm(self, genAlgorithm):
+        self.genAlgorithm = genAlgorithm
+
+    def updateScore(self, score):
+        self.score = score
+
+    def newGame(self):
+        self.updateScore([0,0])
+        self.startingPlayer = 0
+        self.generateNumbers()
+
+    def generateNumbers(self):
+        numbs = set()
+        while len(numbs) < 5:
+            if self.genAlgorithm == "simple":
+                numbs.add(simpleGen())
+            else:
+                numbs.add(oneNineGen())
+        self.numbersToPlay = list(numbs)
+
+
+    def chooseNumberToPlay(self, number):
+        self.startingNumber = number
+        self.generateTree(number)
+
+
+    def generateTree(self, number):
+        self.head = Node(number=number)
+        print(number)
+        self._recursiveTree(self.head)
+
+    def generateTree(self, number):
+        self.head = Node(
+            number=number,
+            player=self.startingPlayer,
+            score=[0, 0],
+            bank=0
+        )
+        self.recursiveTree(self.head)
+
+    def recursiveTree(self, node):
+        if node.number <= 10:
+            return
+        nextPlayer = 1 if node.player == 0 else 0
+        for divisor in config['divisors']:
+            if node.number % divisor == 0:
+                newNumber = node.number // divisor
+                newScore = node.score.copy()
+                newBank = node.bank
+                if newNumber % 2 == 0:
+                    newScore[node.player] -= 1
+                else:
+                    newScore[node.player] += 1
+                if newNumber % 10 == 0 or newNumber % 10 == 5:
+                    newBank += 1
+                if newNumber <= 10:
+                    newScore[node.player] += newBank
+                    newBank = 0
+                child = Node(number=newNumber, player=nextPlayer, score=newScore, moveUsed=divisor, parent=node, bank=newBank)
+                node.children.append(child)
+                self.recursiveTree(child)
 
 # http://datacamp.com/tutorial/python-abstract-classes
 class Screen(ABC):
@@ -44,16 +116,19 @@ class IntroScreen(Screen):
         screen.blit(rotated, rect)
 
     def drawWall(self, screen):
-        layers = 15
+        layers = 16
         layerList = []
         for i in range(layers):
             t = (i + self.wallOffset) % layers
             layerList.append(t)
-        layerList.sort() 
+        layerList.sort()
+        deltaMovment = 5
+        colorReduction = 3
+        shiftCoefficient = 150
         for t in layerList:
-            x = int((t / layers) * 150)
-            color = max(0, min(255, x / 2))
-            pygame.draw.polygon(screen, (color, color, color), [(600 + x, 300 - 3 * x), (800,0), (1280 ,0), (1280,720), (800,720), (600 + x,300 + 3 * x)])
+            x = int((t / layers) * shiftCoefficient)
+            color = max(0, min(255/ colorReduction, x / colorReduction))
+            pygame.draw.polygon(screen, (color, color, color), [(600 + x, 300 - deltaMovment * x), (800,0), (1280 ,0), (1280,720), (800,720), (600 + x,300 + deltaMovment * x)])
 
 
     def playScreen(self, screen, dt, events):
@@ -76,8 +151,36 @@ class GameScreen(Screen):
         screen.fill("purple")
 
 class SettingsScreen(Screen):
+    def __init__(self, game):
+        super().__init__(game)
+        color = (20, 20, 20, 10)
+        self.genAlgorithmButton = Button(600, 400, 300, 60, self.game.gameData.genAlgorithm, None, color)
+        self.algorithmButton = Button(600, 470, 300, 60, self.game.gameData.mode, None, color)
+        self.backButton = Button(600, 540, 300, 60, "Back", None, color)
+    
     def playScreen(self, screen, dt, events):
-        screen.fill("grey")
+        screen.fill("black")
+        self.genAlgorithmButton.draw(screen)
+        self.algorithmButton.draw(screen)
+        self.backButton.draw(screen)
+
+        for event in events:
+            if self.genAlgorithmButton.clicked(event):
+                if self.game.gameData.genAlgorithm == "simple":
+                    newGen = "oneNineGen"
+                else:
+                    newGen = "simple"
+                self.game.gameData.updateGenAlgorithm(newGen)
+                self.genAlgorithmButton.setText(newGen)
+            elif self.algorithmButton.clicked(event):
+                if self.game.gameData.mode == "minMax":
+                    newMode = "alfaBeta"
+                else:
+                    newMode = "minMax"
+                self.game.gameData.updateMode(newMode)
+                self.algorithmButton.setText(newMode)
+            elif self.backButton.clicked(event):
+                self.game.setScreen(IntroScreen(self.game))
 
 class EndScreen(Screen):
     def playScreen(self, screen, dt, events):
@@ -87,6 +190,8 @@ class EndScreen(Screen):
 class Game():
     def __init__(self):
         self.currentScreen = None
+        self.gameData = GameData()
+        self.gameData.chooseNumberToPlay(64)
         self.gameLoop()
 
     def setScreen(self, screen: Screen):
