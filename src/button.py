@@ -29,3 +29,6 @@ class Button:
         return (event.type == pygame.MOUSEBUTTONDOWN and 
                 event.button == 1 and 
                 self.rect.collidepoint(event.pos))
+
+    def setText(self, text):
+        self.text = text
