@@ -1,5 +1,5 @@
 class Node():
-    def __init__(self, number, player, score, moveUsed=None, parent=None):
+    def __init__(self, number, player, score, bank, moveUsed=None, parent=None):
         self.number = number
         self.player = player
         self.score = score
@@ -7,3 +7,4 @@ class Node():
         self.parent = parent
         self.children = []
         self.algorithmValue = None
+        self.bank = bank

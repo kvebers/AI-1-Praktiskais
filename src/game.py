@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from src.button import Button
 import math
 from src.number_gen import simpleGen, oneNineGen
-
+from src.graph import Node
 
 
 class GameData():
@@ -15,6 +15,7 @@ class GameData():
         self.score = [0, 0]
         self.startingNumber = None
         self.numbersToPlay = []
+        self.head = None
         print("Game Script is running")
 
     def updateMode(self, algorithm):
@@ -47,10 +48,44 @@ class GameData():
 
     def chooseNumberToPlay(self, number):
         self.startingNumber = number
+        self.generateTree(number)
 
 
-    def generateTree(self):
-        pass
+    def generateTree(self, number):
+        self.head = Node(number=number)
+        print(number)
+        self._recursiveTree(self.head)
+
+    def generateTree(self, number):
+        self.head = Node(
+            number=number,
+            player=self.startingPlayer,
+            score=[0, 0],
+            bank=0
+        )
+        self.recursiveTree(self.head)
+
+    def recursiveTree(self, node):
+        if node.number <= 10:
+            return
+        nextPlayer = 1 if node.player == 0 else 0
+        for divisor in config['divisors']:
+            if node.number % divisor == 0:
+                newNumber = node.number // divisor
+                newScore = node.score.copy()
+                newBank = node.bank
+                if newNumber % 2 == 0:
+                    newScore[node.player] -= 1
+                else:
+                    newScore[node.player] += 1
+                if newNumber % 10 == 0 or newNumber % 10 == 5:
+                    newBank += 1
+                if newNumber <= 10:
+                    newScore[node.player] += newBank
+                    newBank = 0
+                child = Node(number=newNumber, player=nextPlayer, score=newScore, moveUsed=divisor, parent=node, bank=newBank)
+                node.children.append(child)
+                self.recursiveTree(child)
 
 # http://datacamp.com/tutorial/python-abstract-classes
 class Screen(ABC):
@@ -156,6 +191,7 @@ class Game():
     def __init__(self):
         self.currentScreen = None
         self.gameData = GameData()
+        self.gameData.chooseNumberToPlay(64)
         self.gameLoop()
 
     def setScreen(self, screen: Screen):
