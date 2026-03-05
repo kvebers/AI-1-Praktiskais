@@ -5,12 +5,13 @@ from src.button import Button
 import math
 
 
+
+
 class GameData():
     def __init__(self):
         self.mode = config["algorithm"]
         self.start = config["start"]
         self.number = config['genAlgorithm']
-        self.nodes = []
         self.playerScore1 = 0
         self.playerScore2 = 0
         print("Game Script is running")
