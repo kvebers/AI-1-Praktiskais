@@ -119,7 +119,7 @@ class SettingsScreen(Screen):
     def __init__(self, game):
         super().__init__(game)
         color = (20, 20, 20, 10)
-        self.genAlgorithmButton = Button(600, 400, 300, 60, f"Gen: {self.game.gameData.genAlgorithm}", None, color)
+        self.genAlgorithmButton = Button(600, 400, 300, 60, f"{self.game.gameData.genAlgorithm}", None, color)
         self.algorithmButton = Button(600, 470, 300, 60, f"Algorithm: {self.game.gameData.mode}", None, color)
         self.backButton = Button(600, 540, 300, 60, "Back", None, color)
     
