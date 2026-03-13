@@ -15,15 +15,85 @@ import math
 # -----------------------------
 # Data
 # -----------------------------
-class GameData:
+class GameData():
     def __init__(self):
-        self.mode = config.get("algorithm", "minimax")
-        self.start = config.get("start", "player")
-        self.number = config.get("genAlgorithm", "random")
-        self.nodes = []
-        self.playerScore1 = 0
-        self.playerScore2 = 0
+        self.mode = config["algorithm"]
+        self.startingPlayer = config["start"]
+        self.genAlgorithm = config['genAlgorithm'] # start number
+        self.score = [0, 0]
+        self.startingNumber = None
+        self.numbersToPlay = []
+        self.head = None
         print("Game Script is running")
+
+    def updateMode(self, algorithm):
+        self.mode = algorithm
+
+
+    def updateStartingPlayer(self, start):
+        self.startingPlayer = start
+
+    def updateGenAlgorithm(self, genAlgorithm):
+        self.genAlgorithm = genAlgorithm
+
+    def updateScore(self, score):
+        self.score = score
+
+    def newGame(self):
+        self.updateScore([0,0])
+        self.startingPlayer = 0
+        self.generateNumbers()
+
+    def generateNumbers(self):
+        numbs = set()
+        while len(numbs) < 5:
+            if self.genAlgorithm == "simple":
+                numbs.add(simpleGen())
+            else:
+                numbs.add(oneNineGen())
+        self.numbersToPlay = list(numbs)
+
+
+    def chooseNumberToPlay(self, number):
+        self.startingNumber = number
+        self.generateTree(number)
+
+
+    def generateTree(self, number):
+        self.head = Node(number=number)
+        print(number)
+        self._recursiveTree(self.head)
+
+    def generateTree(self, number):
+        self.head = Node(
+            number=number,
+            player=self.startingPlayer,
+            score=[0, 0],
+            bank=0
+        )
+        self.recursiveTree(self.head)
+
+    def recursiveTree(self, node):
+        if node.number <= 10:
+            return
+        nextPlayer = 1 if node.player == 0 else 0
+        for divisor in config['divisors']:
+            if node.number % divisor == 0:
+                newNumber = node.number // divisor
+                newScore = node.score.copy()
+                newBank = node.bank
+                if newNumber % 2 == 0:
+                    newScore[node.player] -= 1
+                else:
+                    newScore[node.player] += 1
+                if newNumber % 10 == 0 or newNumber % 10 == 5:
+                    newBank += 1
+                if newNumber <= 10:
+                    newScore[node.player] += newBank
+                    newBank = 0
+                child = Node(number=newNumber, player=nextPlayer, score=newScore, moveUsed=divisor, parent=node, bank=newBank)
+                node.children.append(child)
+                self.recursiveTree(child)
 
 
 # -----------------------------
@@ -141,30 +211,37 @@ class CastScreen(Screen):
                 self.game.setScreen(IntroScreen(self.game))
 
 
-# -----------------------------
-# Settings screen (placeholder)
-# -----------------------------
+
 class SettingsScreen(Screen):
     def __init__(self, game):
         super().__init__(game)
-        self.fontTitle = pygame.font.SysFont("Roboto", 56, bold=True)
-        self.font = pygame.font.SysFont("Roboto", 28)
-        color = (20, 20, 20, 140)
-        self.backButton = Button(80, 620, 260, 60, "Back", None, color)
-
+        color = (20, 20, 20, 10)
+        self.genAlgorithmButton = Button(600, 400, 300, 60, self.game.gameData.genAlgorithm, None, color)
+        self.algorithmButton = Button(600, 470, 300, 60, self.game.gameData.mode, None, color)
+        self.backButton = Button(600, 540, 300, 60, "Back", None, color)
+    
     def playScreen(self, screen, dt, events):
-        screen.fill((40, 40, 45))
-
-        title = self.fontTitle.render("SETTINGS", True, (255, 255, 255))
-        screen.blit(title, (80, 80))
-
-        info = self.font.render("(Te vēlāk ieliksi: algorithm, start, depth, utt.)", True, (220, 220, 220))
-        screen.blit(info, (80, 160))
-
+        screen.fill("black")
+        self.genAlgorithmButton.draw(screen)
+        self.algorithmButton.draw(screen)
         self.backButton.draw(screen)
 
         for event in events:
-            if self.backButton.clicked(event):
+            if self.genAlgorithmButton.clicked(event):
+                if self.game.gameData.genAlgorithm == "simple":
+                    newGen = "oneNineGen"
+                else:
+                    newGen = "simple"
+                self.game.gameData.updateGenAlgorithm(newGen)
+                self.genAlgorithmButton.setText(newGen)
+            elif self.algorithmButton.clicked(event):
+                if self.game.gameData.mode == "minMax":
+                    newMode = "alfaBeta"
+                else:
+                    newMode = "minMax"
+                self.game.gameData.updateMode(newMode)
+                self.algorithmButton.setText(newMode)
+            elif self.backButton.clicked(event):
                 self.game.setScreen(IntroScreen(self.game))
 
 
@@ -174,7 +251,6 @@ class SettingsScreen(Screen):
 class GameScreen(Screen):
     def __init__(self, game):
         super().__init__(game)
-
         self.fontTitle = pygame.font.SysFont("Roboto", 44, bold=True)
         self.font = pygame.font.SysFont("Roboto", 28)
 
@@ -455,6 +531,7 @@ class EndScreen(Screen):
 # -----------------------------
 class Game:
     def __init__(self):
+        self.gameData = GameData()
         self.currentScreen = None
         self.gameLoop()
 
