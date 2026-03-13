@@ -58,7 +58,7 @@ def result_of_turn(state, divisor):
         raise ValueError("game is over")
     
     if divisor not in possible_divisions(state):
-        raise ValueError("Invalid turn, number is not divisible by divisor")
+        raise ValueError("Invalid turn, number is not divisible by divisor") #
                                                                                                         
     new_number = number // divisor
 
