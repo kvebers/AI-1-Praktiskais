@@ -9,7 +9,7 @@ TURN = 4 # Kuram spēlētājam ir gājiens
 DIVISORS = config["divisors"]
 BANK_DIVISORS = config["bankDivisors"]
 
-def init_state(start_number, starting_player=1):
+def init_state(start_number, starting_player=0):
     return (start_number, 0, 0, 0, starting_player)
 
 def whose_turn(state):
@@ -26,11 +26,15 @@ def possible_divisions(state):
             possible.append(divisor)
     return possible
 
+#pārbauda vai spēle ir beigusies
+
 def is_game_over(state):
     if state[NUMBER] <= 10:
         return True
 
     return len(possible_divisions(state)) == 0
+
+#piešķir bankas punktus, ja spēle beidzas spēlētājam, kuram bija pēdējais gājiens
 
 def give_bank_score(state):
     number = state[NUMBER]
@@ -40,7 +44,7 @@ def give_bank_score(state):
     turn = state[TURN]
 
     if bank_score > 0:
-        if turn == 1:
+        if turn == 0:
             p2_score += bank_score
         else:
             p1_score += bank_score
@@ -63,7 +67,7 @@ def result_of_turn(state, divisor):
     new_number = number // divisor
 
     score_change = 1 if (new_number % 2 == 1) else -1
-    if turn == 1:
+    if turn == 0:
         p1_score += score_change
     else:
         p2_score += score_change
@@ -71,7 +75,7 @@ def result_of_turn(state, divisor):
     if new_number % 10 in BANK_DIVISORS:
         bank_score += 1
 
-    next_turn = 2 if turn == 1 else 1
+    next_turn = 1 if turn == 0 else 0
     new_state = (new_number, p1_score, p2_score, bank_score, next_turn)
 
     if is_game_over(new_state):
