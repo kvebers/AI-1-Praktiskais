@@ -10,6 +10,9 @@ import pygame
 from abc import ABC, abstractmethod
 from src.button import Button
 import math
+from src.graph import Node
+from src.number_gen import simpleGen, oneNineGen
+from src.game_logic import possible_divisions, result_of_turn, is_game_over
 
 
 # -----------------------------
@@ -74,26 +77,19 @@ class GameData():
         self.recursiveTree(self.head)
 
     def recursiveTree(self, node):
-        if node.number <= 10:
-            return
-        nextPlayer = 1 if node.player == 0 else 0
-        for divisor in config['divisors']:
-            if node.number % divisor == 0:
-                newNumber = node.number // divisor
-                newScore = node.score.copy()
-                newBank = node.bank
-                if newNumber % 2 == 0:
-                    newScore[node.player] -= 1
-                else:
-                    newScore[node.player] += 1
-                if newNumber % 10 == 0 or newNumber % 10 == 5:
-                    newBank += 1
-                if newNumber <= 10:
-                    newScore[node.player] += newBank
-                    newBank = 0
-                child = Node(number=newNumber, player=nextPlayer, score=newScore, moveUsed=divisor, parent=node, bank=newBank)
-                node.children.append(child)
-                self.recursiveTree(child)
+        state = (node.number, node.score[0], node.score[1], node.bank, node.player)
+        for divisor in possible_divisions(state):
+            new_state = result_of_turn(state, divisor)
+            child = Node(
+                number=new_state[0],
+                player=new_state[4],
+                score=[new_state[1], new_state[2]],
+                bank=new_state[3],
+                moveUsed=divisor,
+                parent=node
+            )
+            node.children.append(child)
+            self.recursiveTree(child)
 
 
 # -----------------------------
