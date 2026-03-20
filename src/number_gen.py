@@ -8,7 +8,7 @@ up_bound=config['lowerBound']
 
 
 def generateRandom(up=low_bound, low=up_bound):
-    return random.randint(up, low)
+    return random.randint(low, up)
     
 def simpleGen():
     rand = generateRandom()
