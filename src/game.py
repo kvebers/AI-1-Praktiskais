@@ -269,9 +269,9 @@ class GameScreen(Screen):
 
     def getAIMove(self):
         if self.game.gameData.mode == "alfaBeta":
-            return alpha_beta_search(self.state)
+            return alpha_beta_search(self.state, self.aiPlayerIndex)
         else:
-            return minimax_search(self.state)
+            return minimax_search(self.state, self.aiPlayerIndex)
         
     def humanTurn(self):
         return whose_turn(self.state) == self.humanPlayerIndex
