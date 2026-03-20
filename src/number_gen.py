@@ -3,12 +3,12 @@ from config import config
 
 
 # https://docs.python.org/3/library/random.html
-low_bound=config['upperBound']
-up_bound=config['lowerBound']
+upBound=config['upperBound']
+lowBound=config['lowerBound']
 
 
-def generateRandom(up=low_bound, low=up_bound):
-    return random.randint(up, low)
+def generateRandom(low=lowBound, up=upBound):
+    return random.randint(low, up)
     
 def simpleGen():
     rand = generateRandom()
@@ -20,12 +20,12 @@ def simpleGen():
 def oneNineGen():
     value = generateRandom(1, 9)
     multi = generateRandom(2, 4)
-    while (value * multi < up_bound):
+    while (value * multi < upBound):
         value *= multi
         multi = generateRandom(2, 4)
-        if (value >= low_bound and value <= up_bound):
+        if (value >= lowBound and value <= upBound):
             break
-    if (value <= low_bound or value >= up_bound):
+    if (value <= lowBound or value >= upBound):
         value = oneNineGen()
     return value
 
