@@ -1,5 +1,4 @@
 import math
-from src.game_logic import possible_divisions, result_of_turn, is_game_over, P1_SCORE, P2_SCORE
 from src.graph import Node
 
 
@@ -11,23 +10,23 @@ def to_state(position):
 
 
 # aprekinam punktu starpibu no ai skatu punkta
-def score_difference(position, ai_player):
+def score_difference(gameState, position, ai_player):
     state = to_state(position)
     if ai_player == 0:
-        return state[P1_SCORE] - state[P2_SCORE]
+        return state[gameState.P1_SCORE] - state[gameState.P2_SCORE]
     else:
-        return state[P2_SCORE] - state[P1_SCORE]
+        return state[gameState.P2_SCORE] - state[gameState.P1_SCORE]
 
 # izveido bernus atkariba no ta, kas tiek padots ieksa
-def get_children(position):
+def get_children(gameState, position):
     state = to_state(position)
 
     # ja iedots node, tad veido bernus ka node objektus
     if isinstance(position, Node):
         children = []
 
-        for divisor in possible_divisions(state):
-            new_state = result_of_turn(state, divisor)
+        for divisor in gameState.possible_divisions(state):
+            new_state = gameState.result_of_turn(state, divisor)
 
             child = Node(
                 number=new_state[0],
@@ -45,8 +44,8 @@ def get_children(position):
 
     # ja iedots state tuple, tad veido bernus ka state
     children = []
-    for divisor in possible_divisions(state):
-        new_state = result_of_turn(state, divisor)
+    for divisor in gameState.possible_divisions(state):
+        new_state = gameState.result_of_turn(state, divisor)
         children.append((divisor, new_state))
 
     return children

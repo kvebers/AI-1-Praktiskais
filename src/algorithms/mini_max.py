@@ -1,29 +1,25 @@
 import math 
-import sys
-import os
-
-from src.game_logic import possible_divisions, result_of_turn, is_game_over
 # pa cik Ai uzvar
 from src.algorithms.alfa_beta import score_difference
 
 # minimax algoritms atgriež labāko gājienu dotajā stāvoklī
 
-def minimax_search(state, ai_player):
-    result = max_value(state, ai_player)
+def minimax_search(gameState, state, ai_player):
+    result = max_value(gameState, state, ai_player)
     best_move = result[1]
     return best_move
 
 #iziet cauri visiem iespējamiem gājieniem un izvēlas to, kas dod vislabāko rezultātu
 
-def max_value(state, ai_player):
-    if is_game_over(state):
-        return score_difference(state, ai_player), None
+def max_value(gameState, state, ai_player):
+    if gameState.is_game_over(state):
+        return score_difference(gameState, state, ai_player), None
     best_value = -math.inf
     best_move = None
 
-    for divisor in possible_divisions(state):
-        new_state = result_of_turn(state, divisor)
-        value = min_value(new_state, ai_player)[0]
+    for divisor in gameState.possible_divisions(state):
+        new_state = gameState.result_of_turn(state, divisor)
+        value = min_value(gameState, new_state, ai_player)[0]
         if value > best_value:
             best_value = value
             best_move = divisor
@@ -32,15 +28,15 @@ def max_value(state, ai_player):
         
 #iziet cauri visiem iespējamiem gājieniem un izvēlas to, kas dod visliktāko rezultātu
 
-def min_value(state, ai_player):
-    if is_game_over(state):
-        return score_difference(state, ai_player), None
+def min_value(gameState, state, ai_player):
+    if gameState.is_game_over(state):
+        return score_difference(gameState, state, ai_player), None
     best_value = math.inf
     best_move = None
 
-    for divisor in possible_divisions(state):
-        new_state = result_of_turn(state, divisor)
-        value = max_value(new_state, ai_player)[0]
+    for divisor in gameState.possible_divisions(state):
+        new_state = gameState.result_of_turn(state, divisor)
+        value = max_value(gameState, new_state, ai_player)[0]
         if value < best_value:
             best_value = value
             best_move = divisor
