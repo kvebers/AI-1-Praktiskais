@@ -14,6 +14,7 @@ from src.number_gen import simpleGen, oneNineGen
 from src.game_logic import *
 from src.algorithms.mini_max import minimax_search
 from src.algorithms.alfa_beta import alpha_beta_search
+from src.game_logic import GameState
 
 
 # -----------------------------
@@ -28,6 +29,7 @@ class GameData():
         self.startingNumber = None
         self.numbersToPlay = []
         self.head = None
+        self.gameState = GameState()
         print("Game Script is running")
 
     def updateMode(self, algorithm):
@@ -66,12 +68,16 @@ class GameData():
             score=[0, 0],
             bank=0
         )
-        self.recursiveTree(self.head)
+        self.recursiveTree(self.head, 0)
 
-    def recursiveTree(self, node):
+    def recursiveTree(self, node, depth):
+        if depth >= self.gameState.maxDepth:
+            return
         state = (node.number, node.score[0], node.score[1], node.bank, node.player)
-        for divisor in possible_divisions(state):
-            new_state = result_of_turn(state, divisor)
+        if self.gameState.is_game_over(state):
+            return
+        for divisor in self.gameState.possible_divisions(state):
+            new_state = self.gameState.result_of_turn(state, divisor)
             child = Node(
                 number=new_state[0],
                 player=new_state[4],
@@ -81,7 +87,11 @@ class GameData():
                 parent=node
             )
             node.children.append(child)
-            self.recursiveTree(child)
+            self.recursiveTree(child, depth + 1)
+
+    def expandTree(self, node):
+        if len(node.children) == 0:
+            self.recursiveTree(node, 0)
 
 
 # -----------------------------
@@ -250,45 +260,52 @@ class GameScreen(Screen):
     def initPyGameForScene(self):
         self.fontTitle = pygame.font.SysFont("Roboto", 44, bold=True)
         self.font = pygame.font.SysFont("Roboto", 28)
-        # Background bilde: assets/banka.png (fallback, ja nav)
         self.bg = pygame.image.load("assets/banka.png").convert()
         self.bg = pygame.transform.scale(self.bg, (1280, 720))
-        # RobBanks bilde AI animācijai
         self.rob = pygame.image.load("assets/RobBanks.png").convert_alpha()
         self.rob = pygame.transform.smoothscale(self.rob, (260, 340))
 
     def initGame(self, game, startNumber):
-        self.state = init_state(startNumber, starting_player=0)
-        self.humanPlayerIndex = 0 if game.gameData.startingPlayer == 0 else 1
-        self.aiPlayerIndex = 1 - self.humanPlayerIndex
+        self.gameState = game.gameData.gameState
+        self.state = self.gameState.init_state(startNumber, starting_player=game.gameData.startingPlayer)
+        self.humanPlayerIndex = 0
+        self.aiPlayerIndex = 1
         self.divisionButtons = []
         self.aiThinkTimer = 0.0
         self.aiThinkDuration = 0.8
         self.aiMove = None
+        game.gameData.generateTree(startNumber)
+        self.currentNode = game.gameData.head
         self.addDivisionButtons()
 
     def getAIMove(self):
         if self.game.gameData.mode == "alfaBeta":
-            return alpha_beta_search(self.state, self.aiPlayerIndex)
+            return alpha_beta_search(self.gameState, self.state, self.aiPlayerIndex)
         else:
-            return minimax_search(self.state, self.aiPlayerIndex)
+            return minimax_search(self.gameState, self.state, self.aiPlayerIndex)
         
     def humanTurn(self):
-        return whose_turn(self.state) == self.humanPlayerIndex
+        return self.gameState.whose_turn(self.state) == self.humanPlayerIndex
  
     def getHumanScore(self):
-        return self.state[P1_SCORE] if self.humanPlayerIndex == 0 else self.state[P2_SCORE]
+        return self.state[self.gameState.P1_SCORE] if self.humanPlayerIndex == 0 else self.state[self.gameState.P2_SCORE]
  
     def getAIScore(self):
-        return self.state[P1_SCORE] if self.aiPlayerIndex == 0 else self.state[P2_SCORE]
+        return self.state[self.gameState.P1_SCORE] if self.aiPlayerIndex == 0 else self.state[self.gameState.P2_SCORE]
  
-    def applyMove(self, divisor, who="Human"):
-        self.state = result_of_turn(self.state, divisor)
+    def applyMove(self, divisor):
+        self.state = self.gameState.result_of_turn(self.state, divisor)
+        if self.currentNode is not None:
+            for child in self.currentNode.children:
+                if child.moveUsed == divisor:
+                    self.currentNode = child
+                    self.game.gameData.expandTree(self.currentNode)
+                    break
         self.addDivisionButtons()
  
     def addDivisionButtons(self):
         self.divisionButtons = []
-        divisions = possible_divisions(self.state)
+        divisions = self.gameState.possible_divisions(self.state)
         buttonStartPosition = 640 - (len(divisions) * 160) // 2
         x, y, w, h = 160, 500, 80, 100
         color = (30, 80, 30, 200)
@@ -313,10 +330,10 @@ class GameScreen(Screen):
         screen.blit(title, (70, 20))
         screen.blit(self.font.render(f"Cilvēks: {self.getHumanScore()}", True, (100, 255, 100)), (70, 80))
         screen.blit(self.font.render(f"Advancēta Drošības Sistēma: {self.getAIScore()}", True, (255, 100, 100)), (800, 80))
-        screen.blit(self.font.render(f"Banka: {self.state[BANK_SCORE]}", True, (255, 215, 0)), (580, 80))
+        screen.blit(self.font.render(f"Banka: {self.state[self.gameState.BANK_SCORE]}", True, (255, 215, 0)), (580, 80))
  
     def draw_number(self, screen):
-        number = self.state[NUMBER]
+        number = self.state[self.gameState.NUMBER]
         txt = self.font.render(str(number), True, (255, 255, 255))
         rect = txt.get_rect(center=(640, 340))
         pygame.draw.circle(screen, (40, 40, 60), (640, 340), 100)
@@ -325,14 +342,13 @@ class GameScreen(Screen):
  
     def playScreen(self, screen, dt, events):
         self.draw_bg(screen)
-        if is_game_over(self.state):
+        if self.gameState.is_game_over(self.state):
             self.game.setScreen(EndScreen(self.game, self.getHumanScore(), self.getAIScore()))
             return 
         self.draw_hud(screen)
         self.draw_number(screen)
         if self.rob:
             screen.blit(self.rob, (1050, 370))
-        # AI kārta -> animācija
         self.AIMoveAnimation(screen, dt)
         self.eventLoop(events)
 
@@ -340,10 +356,16 @@ class GameScreen(Screen):
         if not self.humanTurn():
             if self.aiMove is None:
                 self.aiThinkTimer = 0.0
-                self.aiMove = self.getAIMove()
+                try:
+                    self.aiMove = self.getAIMove()
+                except Exception as e:
+                    print(f"AI move error: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    return
             self.aiThinkTimer += dt
             if self.aiThinkTimer >= self.aiThinkDuration and self.aiMove is not None:
-                self.applyMove(self.aiMove, who="AI")
+                self.applyMove(self.aiMove)
                 self.aiMove = None
         else:
             for div, btn in self.divisionButtons:
@@ -354,7 +376,7 @@ class GameScreen(Screen):
             if self.humanTurn() and self.aiMove is None:
                 for div, btn in self.divisionButtons:
                     if btn.clicked(event):
-                        self.applyMove(div, who="Human")
+                        self.applyMove(div)
                         return
 
 

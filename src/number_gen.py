@@ -12,7 +12,7 @@ def generateRandom(low=lowBound, up=upBound):
     
 def simpleGen():
     rand = generateRandom()
-    while (rand % 2 != 0 or rand % 3 != 0):
+    while (rand % 2 != 0 or rand % 3 != 0 or rand % 4 != 0):
         rand = generateRandom()
     return rand
 
@@ -28,7 +28,4 @@ def oneNineGen():
     if (value <= lowBound or value >= upBound):
         value = oneNineGen()
     return value
-
-
-
 
