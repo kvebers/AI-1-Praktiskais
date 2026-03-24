@@ -68,10 +68,14 @@ class GameData():
             score=[0, 0],
             bank=0
         )
-        self.recursiveTree(self.head)
+        self.recursiveTree(self.head, 0)
 
-    def recursiveTree(self, node):
+    def recursiveTree(self, node, depth):
+        if depth >= self.gameState.maxDepth:
+            return
         state = (node.number, node.score[0], node.score[1], node.bank, node.player)
+        if self.gameState.is_game_over(state):
+            return
         for divisor in self.gameState.possible_divisions(state):
             new_state = self.gameState.result_of_turn(state, divisor)
             child = Node(
@@ -83,7 +87,11 @@ class GameData():
                 parent=node
             )
             node.children.append(child)
-            self.recursiveTree(child)
+            self.recursiveTree(child, depth + 1)
+
+    def expandTree(self, node):
+        if len(node.children) == 0:
+            self.recursiveTree(node, 0)
 
 
 # -----------------------------
@@ -252,22 +260,22 @@ class GameScreen(Screen):
     def initPyGameForScene(self):
         self.fontTitle = pygame.font.SysFont("Roboto", 44, bold=True)
         self.font = pygame.font.SysFont("Roboto", 28)
-        # Background bilde: assets/banka.png (fallback, ja nav)
         self.bg = pygame.image.load("assets/banka.png").convert()
         self.bg = pygame.transform.scale(self.bg, (1280, 720))
-        # RobBanks bilde AI animācijai
         self.rob = pygame.image.load("assets/RobBanks.png").convert_alpha()
         self.rob = pygame.transform.smoothscale(self.rob, (260, 340))
 
     def initGame(self, game, startNumber):
         self.gs = game.gameData.gameState
         self.state = self.gs.init_state(startNumber, starting_player=game.gameData.startingPlayer)
-        self.humanPlayerIndex = 0 if game.gameData.startingPlayer == 0 else 1
-        self.aiPlayerIndex = 1 - self.humanPlayerIndex
+        self.humanPlayerIndex = 0
+        self.aiPlayerIndex = 1
         self.divisionButtons = []
         self.aiThinkTimer = 0.0
         self.aiThinkDuration = 0.8
         self.aiMove = None
+        game.gameData.generateTree(startNumber)
+        self.currentNode = game.gameData.head
         self.addDivisionButtons()
 
     def getAIMove(self):
@@ -287,6 +295,12 @@ class GameScreen(Screen):
  
     def applyMove(self, divisor):
         self.state = self.gs.result_of_turn(self.state, divisor)
+        if self.currentNode is not None:
+            for child in self.currentNode.children:
+                if child.moveUsed == divisor:
+                    self.currentNode = child
+                    self.game.gameData.expandTree(self.currentNode)
+                    break
         self.addDivisionButtons()
  
     def addDivisionButtons(self):
@@ -335,7 +349,6 @@ class GameScreen(Screen):
         self.draw_number(screen)
         if self.rob:
             screen.blit(self.rob, (1050, 370))
-        # AI kārta -> animācija
         self.AIMoveAnimation(screen, dt)
         self.eventLoop(events)
 
@@ -343,7 +356,13 @@ class GameScreen(Screen):
         if not self.humanTurn():
             if self.aiMove is None:
                 self.aiThinkTimer = 0.0
-                self.aiMove = self.getAIMove()
+                try:
+                    self.aiMove = self.getAIMove()
+                except Exception as e:
+                    print(f"AI move error: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    return
             self.aiThinkTimer += dt
             if self.aiThinkTimer >= self.aiThinkDuration and self.aiMove is not None:
                 self.applyMove(self.aiMove)

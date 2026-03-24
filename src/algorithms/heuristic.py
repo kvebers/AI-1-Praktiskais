@@ -9,9 +9,9 @@ def heuristic(gameState, state, ai_player):
         ai = state[gameState.P1_SCORE]
         robber = state[gameState.P2_SCORE]
     diff = ai - robber
-    return heuristic_helper(numb, bank, diff, gameState.DIVISORS)
+    return heuristicHelper(numb, bank, diff, gameState.DIVISORS)
 
-def heuristic_helper(numb, bank, diff, div):
+def heuristicHelper(numb, bank, diff, div):
     endGameCoefficientMagicNumber = 30
     value = 0
     for devision in div:
@@ -21,3 +21,4 @@ def heuristic_helper(numb, bank, diff, div):
     value += 10 if numb < endGameCoefficientMagicNumber else 0
     value += bank
     value += diff
+    return value

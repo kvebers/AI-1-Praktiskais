@@ -4,7 +4,7 @@ config = {
     "genAlgorithm": "simple", # oneNineGen
     "upperBound": 30000,
     "lowerBound": 20000,
-    "algorithm": "minimax",
+    "algorithm": "minMax",
     "start": 0,
     "maxDepth": 3
 }

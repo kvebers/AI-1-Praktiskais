@@ -1,5 +1,6 @@
 import math
 from src.graph import Node
+from src.algorithms.heuristic import heuristic
 
 
 # parveido node uz state tuple, ja vajag
@@ -21,8 +22,10 @@ def score_difference(gameState, position, ai_player):
 def get_children(gameState, position):
     state = to_state(position)
 
-    # ja iedots node, tad veido bernus ka node objektus
     if isinstance(position, Node):
+        if len(position.children) > 0:
+            return position.children
+
         children = []
 
         for divisor in gameState.possible_divisions(state):
@@ -42,7 +45,6 @@ def get_children(gameState, position):
         position.children = children
         return children
 
-    # ja iedots state tuple, tad veido bernus ka state
     children = []
     for divisor in gameState.possible_divisions(state):
         new_state = gameState.result_of_turn(state, divisor)
@@ -52,18 +54,18 @@ def get_children(gameState, position):
 
 
 # galvena funkcija, kas atrod labako gajenu ai
-def alpha_beta_search(position, ai_player=0):
-    _, best_move = max_value(position, -math.inf, math.inf, ai_player)
+def alpha_beta_search(gameState, position, ai_player=0):
+    _, best_move = max_value(gameState, position, -math.inf, math.inf, ai_player, 0)
     return best_move
 
 
 # max dala - ai gajiens, mekle lielako vertibu
-def max_value(position, alpha, beta, ai_player):
+def max_value(gameState, position, alpha, beta, ai_player, depth):
     state = to_state(position)
 
     # ja spele ir beigusies, atgriezam gala vertibu
-    if is_game_over(state):
-        value = score_difference(position, ai_player)
+    if gameState.is_game_over(state):
+        value = score_difference(gameState, position, ai_player)
 
         # ja stradam ar node, saglabajam vertibu mezgla
         if isinstance(position, Node):
@@ -71,12 +73,18 @@ def max_value(position, alpha, beta, ai_player):
 
         return value, None
 
+    if depth >= gameState.maxDepth:
+        value = heuristic(gameState, state, ai_player)
+        if isinstance(position, Node):
+            position.algorithmValue = value
+        return value, None
+
     # sakuma labakais rezultats ir loti mazs
     best_score = -math.inf
     best_move = None
 
     # iegustam visus nakamos bernus
-    children = get_children(position)
+    children = get_children(gameState, position)
 
     for child in children:
         # ja stradam ar node, gajiens ir child.moveUsed
@@ -88,7 +96,7 @@ def max_value(position, alpha, beta, ai_player):
             move_used, next_position = child
 
         # pec ai gajiena nakamais ir cilveks
-        score = min_value(next_position, alpha, beta, ai_player)[0]
+        score = min_value(gameState, next_position, alpha, beta, ai_player, depth + 1)[0]
 
         # ja atrasts labaks rezultats, saglabajam to
         if score > best_score:
@@ -110,12 +118,12 @@ def max_value(position, alpha, beta, ai_player):
 
 
 # min dala - cilveka gajiens, mekle mazako vertibu
-def min_value(position, alpha, beta, ai_player):
+def min_value(gameState, position, alpha, beta, ai_player, depth):
     state = to_state(position)
 
     # ja spele ir beigusies, atgriezam gala vertibu
-    if is_game_over(state):
-        value = score_difference(position, ai_player)
+    if gameState.is_game_over(state):
+        value = score_difference(gameState, position, ai_player)
 
         # ja stradam ar node, saglabajam vertibu mezgla
         if isinstance(position, Node):
@@ -123,12 +131,18 @@ def min_value(position, alpha, beta, ai_player):
 
         return value, None
 
+    if depth >= gameState.maxDepth:
+        value = heuristic(gameState, state, ai_player)
+        if isinstance(position, Node):
+            position.algorithmValue = value
+        return value, None
+
     # sakuma labakais rezultats ir loti liels
     best_score = math.inf
     best_move = None
 
     # iegustam visus nakamos bernus
-    children = get_children(position)
+    children = get_children(gameState, position)
 
     for child in children:
         # ja stradam ar node, gajiens ir child.moveUsed
@@ -140,7 +154,7 @@ def min_value(position, alpha, beta, ai_player):
             move_used, next_position = child
 
         # pec cilveka gajiena nakamais ir ai
-        score = max_value(next_position, alpha, beta, ai_player)[0]
+        score = max_value(gameState, next_position, alpha, beta, ai_player, depth + 1)[0]
 
         # cilveks izvelas ai sliktako variantu
         if score < best_score:
@@ -157,3 +171,4 @@ def min_value(position, alpha, beta, ai_player):
     # ja stradam ar node, saglabajam algoritma vertibu mezgla
     if isinstance(position, Node):
         position.algorithmValue = best_score
+    return best_score, best_move
