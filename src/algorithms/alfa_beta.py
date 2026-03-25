@@ -2,6 +2,8 @@ import math
 from src.graph import Node
 from src.algorithms.heuristic import heuristic
 
+_node_count = 0
+
 
 # parveido node uz state tuple, ja vajag
 def to_state(position):
@@ -55,12 +57,16 @@ def get_children(gameState, position):
 
 # galvena funkcija, kas atrod labako gajenu ai
 def alpha_beta_search(gameState, position, ai_player=0):
+    global _node_count
+    _node_count = 0
     _, best_move = max_value(gameState, position, -math.inf, math.inf, ai_player, 0)
-    return best_move
+    return best_move, _node_count
 
 
 # max dala - ai gajiens, mekle lielako vertibu
 def max_value(gameState, position, alpha, beta, ai_player, depth):
+    global _node_count
+    _node_count += 1
     state = to_state(position)
 
     # ja spele ir beigusies, atgriezam gala vertibu
@@ -119,6 +125,8 @@ def max_value(gameState, position, alpha, beta, ai_player, depth):
 
 # min dala - cilveka gajiens, mekle mazako vertibu
 def min_value(gameState, position, alpha, beta, ai_player, depth):
+    global _node_count
+    _node_count += 1
     state = to_state(position)
 
     # ja spele ir beigusies, atgriezam gala vertibu
