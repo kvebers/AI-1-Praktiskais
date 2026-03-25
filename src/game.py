@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 
 # ļauj importēt config.py no projekta saknes (AI-1-Praktiskais-main/config.py)
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -15,6 +16,15 @@ from src.game_logic import *
 from src.algorithms.mini_max import minimax_search
 from src.algorithms.alfa_beta import alpha_beta_search
 from src.game_logic import GameState
+
+def count_tree_nodes(gameState, state, depth=0):
+    if gameState.is_game_over(state) or depth >= gameState.maxDepth:
+        return 1
+    total = 1
+    for divisor in gameState.possible_divisions(state):
+        new_state = gameState.result_of_turn(state, divisor)
+        total += count_tree_nodes(gameState, new_state, depth + 1)
+    return total
 
 
 # -----------------------------
@@ -274,15 +284,23 @@ class GameScreen(Screen):
         self.aiThinkTimer = 0.0
         self.aiThinkDuration = 0.8
         self.aiMove = None
+        self.totalNodes = 0
+        self.totalTreeNodes = 0
+        self.moveTimes = []
         game.gameData.generateTree(startNumber)
         self.currentNode = game.gameData.head
         self.addDivisionButtons()
 
     def getAIMove(self):
+        start = time.time()
         if self.game.gameData.mode == "alfaBeta":
-            return alpha_beta_search(self.gameState, self.state, self.aiPlayerIndex)
+            move, nodes = alpha_beta_search(self.gameState, self.state, self.aiPlayerIndex)
         else:
-            return minimax_search(self.gameState, self.state, self.aiPlayerIndex)
+            move, nodes = minimax_search(self.gameState, self.state, self.aiPlayerIndex)
+        self.totalNodes += nodes
+        self.totalTreeNodes += count_tree_nodes(self.gameState, self.state)
+        self.moveTimes.append(time.time() - start)
+        return move
         
     def humanTurn(self):
         return self.gameState.whose_turn(self.state) == self.humanPlayerIndex
@@ -343,7 +361,8 @@ class GameScreen(Screen):
     def playScreen(self, screen, dt, events):
         self.draw_bg(screen)
         if self.gameState.is_game_over(self.state):
-            self.game.setScreen(EndScreen(self.game, self.getHumanScore(), self.getAIScore()))
+            avg_time = sum(self.moveTimes) / len(self.moveTimes) if self.moveTimes else 0.0
+            self.game.setScreen(EndScreen(self.game, self.getHumanScore(), self.getAIScore(), self.totalNodes, self.totalTreeNodes, avg_time))
             return 
         self.draw_hud(screen)
         self.draw_number(screen)
@@ -431,18 +450,22 @@ class StartGameScreen(Screen):
 # End screen
 # -----------------------------
 class EndScreen(Screen):
-    def __init__(self, game, humanScore, aiScore):
+    def __init__(self, game, humanScore, aiScore, totalNodes=0, totalTreeNodes=0, avgMoveTime=0.0):
         super().__init__(game)
         self.humanScore = humanScore
         self.aiScore = aiScore
+        self.totalNodes = totalNodes
+        self.totalTreeNodes = totalTreeNodes
+        self.avgMoveTime = avgMoveTime
         self.initPyGameForSceen()
 
     def initPyGameForSceen(self):
         self.fontBig = pygame.font.SysFont("Roboto", 60, bold=True)
         self.font = pygame.font.SysFont("Roboto", 32)
+        self.fontSmall = pygame.font.SysFont("Roboto", 26)
         color = (20, 20, 20, 140)
-        self.menuButton = Button(540, 520, 220, 60, "Menu", None, color)
-        self.restartButton = Button(540, 600, 220, 60, "Restart", None, color)
+        self.menuButton = Button(540, 560, 220, 60, "Menu", None, color)
+        self.restartButton = Button(540, 640, 220, 60, "Restart", None, color)
 
     def playScreen(self, screen, dt, events):
         screen.fill((0, 0, 0))
@@ -453,9 +476,13 @@ class EndScreen(Screen):
         else:
             result = "Tevi nepieķēra"
         txt = self.fontBig.render(result, True, (255, 255, 255))
-        screen.blit(txt, txt.get_rect(center=(640, 240)))
-        score = self.font.render(f"Human: {self.humanScore}   AI: {self.aiScore}", True, (255, 255, 255))
-        screen.blit(score, score.get_rect(center=(640, 330)))
+        screen.blit(txt, txt.get_rect(center=(640, 220)))
+        score = self.font.render(f"Cilvēks: {self.humanScore}   AI: {self.aiScore}", True, (255, 255, 255))
+        screen.blit(score, score.get_rect(center=(640, 310)))
+        nodes_txt = self.fontSmall.render(f"Novērtētās virsotnes: {self.totalNodes} no {self.totalTreeNodes}", True, (180, 180, 255))
+        screen.blit(nodes_txt, nodes_txt.get_rect(center=(640, 390)))
+        time_txt = self.fontSmall.render(f"Vidējais AI gājiena laiks: {self.avgMoveTime * 1000:.2f} ms", True, (180, 255, 180))
+        screen.blit(time_txt, time_txt.get_rect(center=(640, 435)))
         self.menuButton.draw(screen)
         self.restartButton.draw(screen)
         for event in events:
