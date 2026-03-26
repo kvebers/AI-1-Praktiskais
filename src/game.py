@@ -27,9 +27,6 @@ def count_tree_nodes(gameState, state, depth=0):
     return total
 
 
-# -----------------------------
-# Data
-# -----------------------------
 class GameData():
     def __init__(self):
         self.mode = config["algorithm"]
@@ -104,9 +101,6 @@ class GameData():
             self.recursiveTree(node, 0)
 
 
-# -----------------------------
-# Screen base
-# -----------------------------
 class Screen(ABC):
     def __init__(self, game):
         self.game = game
@@ -116,17 +110,13 @@ class Screen(ABC):
         pass
 
 
-# -----------------------------
-# Intro / Menu
-# -----------------------------
 class IntroScreen(Screen):
     def __init__(self, game):
         super().__init__(game)
         color = (20, 20, 20, 140)
 
         self.bgImage = pygame.image.load("assets/RobBanks.png").convert_alpha()
-
-        # pogas (CAST pa vidu)
+        
         self.startButton = Button(800, 420, 300, 60, "Aplaupīt Banku", None, color)
         self.castButton = Button(800, 490, 300, 60, "Biedri", None, color)
         self.settingsButton = Button(800, 560, 300, 60, "Iestatījumi", None, color)
@@ -183,17 +173,17 @@ class IntroScreen(Screen):
 
 
 
-# -----------------------------
-# CAST screen
-# -----------------------------
 class CastScreen(Screen):
     def __init__(self, game):
         super().__init__(game)
         self.fontTitle = pygame.font.SysFont("Roboto", 56, bold=True)
         self.font = pygame.font.SysFont("Roboto", 32)
-
+        self.bg = pygame.image.load("assets/banka.png").convert()
+        self.bg = pygame.transform.scale(self.bg, (1280, 720))
         color = (20, 20, 20, 140)
-        self.backButton = Button(510, 620, 300, 60, "Back to main menu", None, color)
+        self.darkness = 50
+        self.order = True
+        self.backButton = Button(500, 620, 280, 60, "Back to main menu", None, color)
 
         self.names = [
             "Valērija Brankova",
@@ -204,8 +194,25 @@ class CastScreen(Screen):
             "Arvīds Rancāns",
         ]
 
-    def playScreen(self, screen, dt, events):
+    def bg_logic(self, screen):
+        dark = 240
+        bright = 120
+        if self.darkness < dark and self.order:
+            self.darkness += 1
+        elif self.darkness > bright and not self.order:
+            self.darkness -= 1
+        else:
+            self.order = not self.order
+
         screen.fill((10, 10, 12))
+        screen.blit(self.bg, (0, 0))
+        overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, self.darkness))
+        screen.blit(overlay, (0, 0))
+
+
+    def playScreen(self, screen, dt, events):
+        self.bg_logic(screen)
         title = self.fontTitle.render("CAST", True, (255, 255, 255))
         screen.blit(title, title.get_rect(center=(640, 120)))
         y = 230
@@ -226,13 +233,24 @@ class CastScreen(Screen):
 class SettingsScreen(Screen):
     def __init__(self, game):
         super().__init__(game)
-        color = (20, 20, 20, 10)
-        self.genAlgorithmButton = Button(600, 400, 300, 60, self.game.gameData.genAlgorithm, None, color)
-        self.algorithmButton = Button(600, 470, 300, 60, self.game.gameData.mode, None, color)
-        self.backButton = Button(600, 540, 300, 60, "Back", None, color)
+        color = (80, 80, 80, 50)
+        bgColor = (0, 0, 0, 90)
+        self.bg = pygame.image.load("assets/banka.png").convert()
+        self.bg = pygame.transform.scale(self.bg, (1280, 720))
+        self.genAlgorithmButton = Button(500, 400, 280, 60, self.game.gameData.genAlgorithm, bgColor, color)
+        self.algorithmButton = Button(500, 470, 280, 60, self.game.gameData.mode, bgColor, color)
+        self.backButton = Button(500, 540, 280, 60, "Back", bgColor, color)
     
-    def playScreen(self, screen, dt, events):
+    def bg_logic(self, screen):
+        dark = 100
         screen.fill("black")
+        screen.blit(self.bg, (0, 0))
+        overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, dark))
+        screen.blit(overlay, (0, 0))
+
+    def playScreen(self, screen, dt, events):
+        self.bg_logic(screen)
         self.genAlgorithmButton.draw(screen)
         self.algorithmButton.draw(screen)
         self.backButton.draw(screen)
@@ -256,9 +274,6 @@ class SettingsScreen(Screen):
                 self.game.setScreen(IntroScreen(self.game))
 
 
-# -----------------------------
-# Game screen (Bank BG + coins + AI RobBanks animation)
-# -----------------------------
 class GameScreen(Screen):
     def __init__(self, game, startNumber):
         super().__init__(game)
@@ -324,8 +339,9 @@ class GameScreen(Screen):
     def addDivisionButtons(self):
         self.divisionButtons = []
         divisions = self.gameState.possible_divisions(self.state)
-        buttonStartPosition = 640 - (len(divisions) * 160) // 2
-        x, y, w, h = 160, 500, 80, 100
+        centerButton = 200
+        buttonStartPosition = 640 - (len(divisions) * centerButton) // 2
+        x, y, w, h = centerButton, 500, centerButton - 20, 80
         color = (30, 80, 30, 200)
         hoverColor = (50, 140, 50, 220)
         for i, div in enumerate(divisions):
@@ -375,12 +391,8 @@ class GameScreen(Screen):
         if not self.humanTurn():
             if self.aiMove is None:
                 self.aiThinkTimer = 0.0
-                try:
-                    self.aiMove = self.getAIMove()
-                except Exception as e:
-                    print(f"AI move error: {e}")
-                    import traceback
-                    traceback.print_exc()
+                self.aiMove = self.getAIMove()
+                if self.aiMove == None:
                     return
             self.aiThinkTimer += dt
             if self.aiThinkTimer >= self.aiThinkDuration and self.aiMove is not None:
@@ -406,18 +418,30 @@ class StartGameScreen(Screen):
         self.font = pygame.font.SysFont("Roboto", 28)
         color = (20, 20, 20, 140)
         hover = (60, 60, 60, 180)
+        
+        self.bg = pygame.image.load("assets/banka.png").convert()
+        self.bg = pygame.transform.scale(self.bg, (1280, 720))
         numbers = self.game.gameData.numbersToPlay
         self.numberButtons = []
         startX = 640 - (len(numbers) * 150) // 2
         for i, num in enumerate(numbers):
-            btn = Button(startX + i * 150, 350, 130, 70, str(num), color, hover)
-            self.numberButtons.append((num, btn))
+            button = Button(startX + i * 150, 350, 130, 70, str(num), color, hover)
+            self.numberButtons.append((num, button))
         start_text = "Uzsāk Laupītājs" if self.game.gameData.startingPlayer == 0 else "Uzsāk Drošības Sistēma"
         self.startButton = Button(340, 480, 600, 50, start_text, color, hover)
         self.backButton = Button(540, 560, 200, 50, "Back", None, color)
 
+    def bg_logic(self, screen):
+        dark = 100
+        screen.fill("black")
+        screen.blit(self.bg, (0, 0))
+        overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, dark))
+        screen.blit(overlay, (0, 0))
+
+
     def playScreen(self, screen, dt, events):
-        screen.fill((10, 10, 15))
+        self.bg_logic(screen)
         title = self.fontTitle.render("Rob Banks Apciemo Banku", True, (255, 255, 255))
         screen.blit(title, title.get_rect(center=(640, 150)))
         info = self.font.render("Izvēlies numuru, lai sāktu spēli", True, (180, 180, 180))
@@ -446,9 +470,6 @@ class StartGameScreen(Screen):
             if self.backButton.clicked(event):
                 self.game.setScreen(IntroScreen(self.game))
 
-# -----------------------------
-# End screen
-# -----------------------------
 class EndScreen(Screen):
     def __init__(self, game, humanScore, aiScore, totalNodes=0, totalTreeNodes=0, avgMoveTime=0.0):
         super().__init__(game)
@@ -457,7 +478,18 @@ class EndScreen(Screen):
         self.totalNodes = totalNodes
         self.totalTreeNodes = totalTreeNodes
         self.avgMoveTime = avgMoveTime
+        self.bg = pygame.image.load("assets/banka.png").convert()
+        self.bg = pygame.transform.scale(self.bg, (1280, 720))
         self.initPyGameForSceen()
+
+    def bg_logic(self, screen):
+        dark = 100
+        screen.fill("black")
+        screen.blit(self.bg, (0, 0))
+        overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, dark))
+        screen.blit(overlay, (0, 0))
+
 
     def initPyGameForSceen(self):
         self.fontBig = pygame.font.SysFont("Roboto", 60, bold=True)
@@ -468,7 +500,7 @@ class EndScreen(Screen):
         self.restartButton = Button(540, 640, 220, 60, "Restart", None, color)
 
     def playScreen(self, screen, dt, events):
-        screen.fill((0, 0, 0))
+        self.bg_logic(screen)
         if self.humanScore > self.aiScore:
             result = "Tu aplaupīji banku!"
         elif self.humanScore < self.aiScore:
@@ -493,9 +525,6 @@ class EndScreen(Screen):
                 self.game.setScreen(StartGameScreen(self.game))
 
 
-# -----------------------------
-# Game loop
-# -----------------------------
 class Game:
     def __init__(self):
         self.gameData = GameData()
