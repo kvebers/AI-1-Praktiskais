@@ -5,7 +5,7 @@ def heuristic(gameState, state, ai_player):
     ai = state[gameState.P2_SCORE]
     robber = state[gameState.P1_SCORE]
     bank = state[gameState.BANK_SCORE]
-    if (ai_player):
+    if not ai_player:
         ai = state[gameState.P1_SCORE]
         robber = state[gameState.P2_SCORE]
     diff = ai - robber
